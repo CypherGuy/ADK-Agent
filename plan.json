@@ -1,0 +1,116 @@
+{
+  "project": {
+    "name": "ADK Repo & Digest Gap Agent",
+    "language": "Python 3.11",
+    "runtime": "cli",
+    "package_manager": "pip",
+    "framework": "Google ADK 1.x",
+    "database": "none",
+    "deployment": "local",
+    "external_services": [
+      "Google Gemini API (Gemini 2.0 Flash)",
+      "Ollama (local, Gemma 3)"
+    ]
+  },
+  "phases": [
+    {
+      "id": 1,
+      "title": "Environment Setup and Project Scaffold",
+      "deliverable": "`python -c 'import google.adk; import ollama; print(\"ok\")'` prints `ok` from inside the project virtualenv",
+      "tasks": [
+        "Create project structure with directories: agents/, tools/, tests/fixtures/, docs/, scripts/",
+        "Install Python 3.11 virtualenv and add google-adk, ollama, python-dotenv, pytest, pytest-mock to requirements.txt",
+        "Pull Gemma 3 model locally via `ollama pull gemma3` and verify `ollama list` shows gemma3",
+        "Create config.py that loads REPOS_PATH, DIGEST_PATH, GEMINI_API_KEY, OLLAMA_BASE_URL, OLLAMA_MODEL, DIGEST_LOOKBACK_DAYS from .env using python-dotenv",
+        "Create .env.example listing all six required environment variables with placeholder values",
+        "Add .env and __pycache__ entries to .gitignore"
+      ],
+      "commit_condition": "Run `python -c 'import google.adk; import ollama; print(\"ok\")'` inside the virtualenv — prints `ok` with no ImportError",
+      "example_input": "Empty ADK-Agent/ directory with only .git and .claude/",
+      "example_output": "Run `python -c 'import google.adk; import ollama; print(\"ok\")'` — terminal prints `ok`; `ollama list` shows gemma3; project tree shows agents/, tools/, tests/fixtures/, config.py, .env.example"
+    },
+    {
+      "id": 2,
+      "title": "Repo Analysis Tools",
+      "deliverable": "`pytest tests/test_repo_tools.py -v` reports all tests passing against fixture repos in tests/fixtures/",
+      "tasks": [
+        "Create tests/fixtures/fake_repo/ containing a package.json with 3 dependencies, a pyproject.toml, and a stub git log text file with 5 fake commit entries",
+        "Implement list_repos(repos_path: str) -> list[str] in tools/repo_tools.py returning subdirectory names under repos_path",
+        "Implement read_git_log(repo_path: str) -> dict in tools/repo_tools.py parsing last commit date and 10 most recent commit messages via `git log`",
+        "Implement read_dependencies(repo_path: str) -> list[str] in tools/repo_tools.py reading package.json, pyproject.toml, requirements.txt, or go.mod; falling back to file-extension inference from git log output if no dependency file exists",
+        "Write tests/test_repo_tools.py with unit tests for list_repos, read_git_log, read_dependencies, and the extension-inference fallback path against tests/fixtures/fake_repo/"
+      ],
+      "commit_condition": "Run `pytest tests/test_repo_tools.py -v` — all tests pass with 0 failures, minimum 6 test cases covering list_repos, read_git_log, read_dependencies, and the extension-inference fallback",
+      "example_input": "tests/fixtures/fake_repo/ exists with package.json containing {\"dependencies\": {\"express\": \"^4\", \"mysql2\": \"^3\", \"dotenv\": \"^16\"}}",
+      "example_output": "Run `python -c 'from tools.repo_tools import read_dependencies; print(read_dependencies(\"tests/fixtures/fake_repo\"))'` — prints `['express', 'mysql2', 'dotenv']`"
+    },
+    {
+      "id": 3,
+      "title": "Digest Reader Tools",
+      "deliverable": "`pytest tests/test_digest_tools.py -v` reports all tests passing against fixture digest files in tests/fixtures/fake_digests/",
+      "tasks": [
+        "Create tests/fixtures/fake_digests/ containing 3 fake .txt digest files with ISO dates in filenames and tech topic paragraphs (FastAPI, Rust, OpenTofu) in body text",
+        "Implement list_digest_files(digest_path: str) -> list[str] in tools/digest_tools.py returning .txt file paths sorted by filename date descending",
+        "Implement read_digest(file_path: str) -> str in tools/digest_tools.py returning raw text content of a single digest file",
+        "Write tests/test_digest_tools.py with unit tests covering list ordering, file reading, and empty-directory handling"
+      ],
+      "commit_condition": "Run `pytest tests/test_digest_tools.py -v` — all tests pass with 0 failures; verify list_digest_files returns files in descending date order",
+      "example_input": "tests/fixtures/fake_digests/ contains 2026-05-01.txt, 2026-05-06.txt, 2026-05-08.txt each with paragraph text mentioning tech topics",
+      "example_output": "Run `python -c 'from tools.digest_tools import list_digest_files; print(list_digest_files(\"tests/fixtures/fake_digests\"))'` — prints `['tests/fixtures/fake_digests/2026-05-08.txt', 'tests/fixtures/fake_digests/2026-05-06.txt', 'tests/fixtures/fake_digests/2026-05-01.txt']`"
+    },
+    {
+      "id": 4,
+      "title": "Parsing Agents on Gemma via Ollama",
+      "deliverable": "`pytest tests/test_agents.py::test_repo_analysis_agent tests/test_agents.py::test_digest_reader_agent -v` passes with mocked Ollama responses",
+      "tasks": [
+        "Implement RepoAnalysisAgent in agents/repo_analysis.py as an ADK LlmAgent using OLLAMA_MODEL, with tools list_repos, read_git_log, and read_dependencies attached, and a system prompt instructing it to return structured JSON: [{repo, technologies[], last_used}]",
+        "Implement DigestReaderAgent in agents/digest_reader.py as an ADK LlmAgent using OLLAMA_MODEL, with tools list_digest_files and read_digest attached, and a system prompt instructing it to return structured JSON: [{topic, mentions, date}]",
+        "Write integration tests for RepoAnalysisAgent and DigestReaderAgent in tests/test_agents.py using pytest-mock to patch Ollama LLM responses, asserting output schema matches expected structure"
+      ],
+      "commit_condition": "Run `pytest tests/test_agents.py::test_repo_analysis_agent tests/test_agents.py::test_digest_reader_agent -v` — both tests pass; no real Ollama calls made during the test run",
+      "example_input": "Mocked Ollama response for RepoAnalysisAgent set to return `[{\"repo\": \"BloodReview\", \"technologies\": [\"express\", \"mysql2\"], \"last_used\": \"2025-10-01\"}]`",
+      "example_output": "RepoAnalysisAgent.run() returns parsed dict matching `[{\"repo\": \"BloodReview\", \"technologies\": [\"express\", \"mysql2\"], \"last_used\": \"2025-10-01\"}]`"
+    },
+    {
+      "id": 5,
+      "title": "Suggestion and Coordinator Agents on Gemini",
+      "deliverable": "`pytest tests/test_agents.py -v` passes all 4 agent tests with mocked Gemini and Ollama responses",
+      "tasks": [
+        "Implement SuggestionAgent in agents/suggestion.py as an ADK LlmAgent using Gemini 2.0 Flash, accepting repo analysis output and digest reader output in context, with a system prompt instructing it to stream 3–5 concrete project suggestions linking underused tech to digest trends",
+        "Implement CoordinatorAgent in agents/coordinator.py as an ADK LlmAgent using Gemini 2.0 Flash, owning the top-level user query and delegating to the pipeline defined in pipeline.py",
+        "Add integration tests for SuggestionAgent and CoordinatorAgent to tests/test_agents.py using pytest-mock to patch Gemini API responses"
+      ],
+      "commit_condition": "Run `pytest tests/test_agents.py -v` — all 4 agent tests pass with 0 failures; no real API calls to Gemini or Ollama made",
+      "example_input": "Mocked SuggestionAgent context includes repo data showing mysql2 unused for 7 months and digest data mentioning CDC twice in the last week",
+      "example_output": "SuggestionAgent.run() streams text beginning with `→ You haven't used mysql2 in 7 months.` followed by a CDC-related project suggestion"
+    },
+    {
+      "id": 6,
+      "title": "Pipeline Assembly and Streaming CLI",
+      "deliverable": "`python main.py 'what should I build this week?'` streams 3–5 project suggestions to the terminal using live Gemini and Ollama calls",
+      "tasks": [
+        "Implement pipeline.py wiring ParallelAgent([repo_analysis_agent, digest_reader_agent]) as phase 1 and SuggestionAgent as phase 2 inside a SequentialAgent, owned by CoordinatorAgent",
+        "Implement main.py CLI entry point accepting an optional query string argument, instantiating the CoordinatorAgent, and running it via ADK's streaming runner with live token output to stdout",
+        "Write tests/test_pipeline.py smoke test running the full pipeline against tests/fixtures/ with mocked agent responses, asserting suggestions stream without errors",
+        "Add error handling in main.py for Ollama-not-reachable (check OLLAMA_BASE_URL on startup, exit with clear message), missing .env keys, and Gemini API failure"
+      ],
+      "commit_condition": "Run `python main.py 'what should I build this week?'` with real .env configured — terminal streams at least 3 suggestions each starting with `→`; run `pytest tests/test_pipeline.py -v` — smoke test passes",
+      "example_input": "Run `python main.py 'what should I build this week?'` with REPOS_PATH pointing to a directory with 3 repos and DIGEST_PATH pointing to 5 digest .txt files",
+      "example_output": "Terminal streams:\n`→ You haven't used mysql2 in 7 months.\n  Your digest mentioned CDC twice this week.\n  Idea: build a lightweight CDC listener using MySQL binlog + Python.\n\n→ You haven't touched Terraform in 4 months.\n  Digest flagged OpenTofu 1.9 last Tuesday.\n  Idea: migrate your AWS infra to OpenTofu.`"
+    },
+    {
+      "id": 7,
+      "title": "Documentation, Test Finalisation, and GitHub Export",
+      "deliverable": "`pytest tests/ -v` reports all tests passing; README.md renders project overview and setup steps; GitHub Actions workflow at .github/workflows/phasecompiler-import.yml creates milestones and issues from plan.json on push to main",
+      "tasks": [
+        "Write README.md documenting project purpose, prerequisites (Python 3.11, Ollama, Gemma 3, Gemini API key), setup steps referencing .env.example, and an example terminal output block",
+        "Finalise tests/ to cover all tools, all four agents, and the pipeline smoke test — ensure no test makes real API calls to Gemini or Ollama",
+        "Create .github/workflows/phasecompiler-import.yml triggering on push to main for plan.json changes and on workflow_dispatch, using GITHUB_TOKEN to create milestones and issues",
+        "Create scripts/phasecompiler_import.py reading plan.json and creating GitHub milestones and issues idempotently via the GitHub REST API using hidden HTML comment markers"
+      ],
+      "commit_condition": "Run `pytest tests/ -v` — all tests pass with 0 failures; push to main — GitHub Actions workflow triggers and creates 7 milestones and all task issues; trigger workflow a second time — no duplicate milestones or issues created",
+      "example_input": "All source files written; plan.json at project root with 7 phases; .env.example committed; .env gitignored",
+      "example_output": "GitHub repository shows 7 milestones (Phase 1: Environment Setup … Phase 7: Documentation), each with task issues assigned; `pytest tests/ -v` prints all tests passed; README.md renders with setup steps and example output block"
+    }
+  ]
+}
