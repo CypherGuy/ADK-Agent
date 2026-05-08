@@ -36,8 +36,8 @@ def read_git_log(repo: str):
         with file.open('r') as file_handle:
             for line in file_handle:
                 if line.startswith('Date:') and not flag:
-                    ret["last_commit_date"] = f"{line.split()[1].strip()} {line.split()[
-                        2].strip()} {line.split()[3].strip()}"
+                    parts = line.split()
+                    ret["last_commit_date"] = f"{parts[1].strip()} {parts[2].strip()} {parts[3].strip()}"
                     flag = True
                 else:
                     commit_list = ret["recent_commits"]

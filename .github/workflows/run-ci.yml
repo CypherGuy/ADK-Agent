@@ -15,6 +15,7 @@ jobs:
         uses: py-actions/flake8@v2
         with:
           path: "tools agents"
+          max-line-length: "120"
 
   test:
     runs-on: ubuntu-latest
