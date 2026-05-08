@@ -1,0 +1,41 @@
+name: run-ADK-agent-ci
+on: [push]
+jobs:
+  flake8-lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: flake8 Lint
+        uses: py-actions/flake8@v2
+        with:
+          path: "tools agents"
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    needs: flake8-lint
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Create .env file
+        run: |
+          echo "REPOS_PATH=/tmp/repos" >> .env
+          echo "DIGEST_PATH=/tmp/digests" >> .env
+          echo "GEMINI_API_KEY=placeholder" >> .env
+          echo "OLLAMA_BASE_URL=http://localhost:11434" >> .env
+          echo "OLLAMA_MODEL=llama3" >> .env
+          echo "DIGEST_LOOKBACK_DAYS=7" >> .env
+      - name: Run tests
+        run: pytest tests/
