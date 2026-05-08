@@ -1,0 +1,9 @@
+{
+  "name": "fake-repo",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "lodash": "^4.17.21"
+  }
+}
