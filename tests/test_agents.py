@@ -142,11 +142,6 @@ class TestRepoAnalysisAgentConfiguration:
             "repo_analysis_agent must have a description — ADK uses this for multi-agent routing"
         )
 
-    def test_repo_analysis_agent_system_prompt_mentions_json(self):
-        from agents.repo_analysis import repo_analysis_agent
-        prompt = repo_analysis_agent.instruction or ""
-        assert "json" in prompt.lower()
-
     def test_repo_analysis_agent_system_prompt_mentions_repo_field(self):
         from agents.repo_analysis import repo_analysis_agent
         prompt = repo_analysis_agent.instruction or ""

@@ -1,7 +1,6 @@
 import datetime
 import json
 import os
-from pathlib import Path
 import subprocess
 import tomllib
 import config
@@ -9,7 +8,7 @@ import config
 
 def list_repos(repos_path):
     """
-    Lists all repositories in the configured repos directory where the 
+    Lists all repositories in the configured repos directory where the
     last commit was made over REPO_STALENESS_DAYS days ago.
 
     Output: a list of subdirectory names (just the names, not full paths)
@@ -127,8 +126,11 @@ def read_dependencies(repo: str):
 
         # We don't include Python because for me personally, I use it in practically
         # every project so no point trying to include it in underused technologies.
-        language_extensions = {"ts": "TypeScript",
-                               "js": "JavaScript", "go": "Golang", "rb": "Ruby", "sh": "Bash", "json": "JSON", "java": "Java", "ps1": "PowerShell", "tf": "Terraform"}
+        language_extensions = {
+            "ts": "TypeScript", "js": "JavaScript", "go": "Golang",
+            "rb": "Ruby", "sh": "Bash", "json": "JSON",
+            "java": "Java", "ps1": "PowerShell", "tf": "Terraform",
+        }
 
         for extension in language_extensions:
             if extension in extension_set:

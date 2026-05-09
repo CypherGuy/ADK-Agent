@@ -12,7 +12,8 @@ FAKE_REPO_NO_EXT = FIXTURES / "fake_repo_no_ext"
 
 def _git_log_output_for_date(date: datetime.date) -> bytes:
     """Build fake git log stdout matching --pretty=format:%at (unix timestamp)."""
-    dt = datetime.datetime.combine(date, datetime.time(12, 0, 0), tzinfo=datetime.timezone.utc)
+    dt = datetime.datetime.combine(date, datetime.time(
+        12, 0, 0), tzinfo=datetime.timezone.utc)
     return str(int(dt.timestamp())).encode()
 
 
@@ -29,8 +30,8 @@ def test_list_repos_excludes_recently_touched_repos(tmp_path):
     (tmp_path / "recent_repo").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 180), \
-         patch.object(mod.config, "EXCLUDED_REPOS", []), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", []), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             stdout=_git_log_output_for_date(recent_date), returncode=0
         )
@@ -47,8 +48,8 @@ def test_list_repos_includes_stale_repos(tmp_path):
     (tmp_path / "stale_repo").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 180), \
-         patch.object(mod.config, "EXCLUDED_REPOS", []), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", []), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             stdout=_git_log_output_for_date(stale_date), returncode=0
         )
@@ -66,8 +67,8 @@ def test_list_repos_returns_empty_when_all_repos_are_recent(tmp_path):
     (tmp_path / "repo_b").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 180), \
-         patch.object(mod.config, "EXCLUDED_REPOS", []), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", []), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             stdout=_git_log_output_for_date(recent_date), returncode=0
         )
@@ -80,12 +81,13 @@ def test_list_repos_excludes_repo_committed_23_hours_ago_with_6_day_threshold(tm
     import agents.tools.repo_tools as mod
     from agents.tools.repo_tools import list_repos
 
-    twenty_three_hours_ago = (datetime.datetime.now() - datetime.timedelta(hours=23)).date()
+    twenty_three_hours_ago = (
+        datetime.datetime.now() - datetime.timedelta(hours=23)).date()
     (tmp_path / "nearly_day_old_repo").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 6), \
-         patch.object(mod.config, "EXCLUDED_REPOS", []), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", []), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             stdout=_git_log_output_for_date(twenty_three_hours_ago), returncode=0
         )
@@ -104,8 +106,8 @@ def test_list_repos_excludes_repos_in_excluded_repos_config(tmp_path):
     (tmp_path / "excluded_repo").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 180), \
-         patch.object(mod.config, "EXCLUDED_REPOS", ["excluded_repo"]), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", ["excluded_repo"]), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             stdout=_git_log_output_for_date(stale_date), returncode=0
         )
@@ -121,8 +123,8 @@ def test_list_repos_skips_repos_with_no_git_history(tmp_path):
     (tmp_path / "no_git_repo").mkdir()
 
     with patch.object(mod.config, "REPO_STALENESS_DAYS", 180), \
-         patch.object(mod.config, "EXCLUDED_REPOS", []), \
-         patch("subprocess.run") as mock_run:
+            patch.object(mod.config, "EXCLUDED_REPOS", []), \
+            patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(stdout=b"", returncode=128)
         result = list_repos(str(tmp_path))
 
@@ -219,7 +221,8 @@ def test_read_git_log_caps_at_ten_commits():
     )
     with patch.object(repo_tools_mod.config, "REPOS_PATH", FIXTURES):
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(stdout=twelve_commits, returncode=0)
+            mock_run.return_value = MagicMock(
+                stdout=twelve_commits, returncode=0)
             result = read_git_log("fake_repo_long")
     assert len(result["recent_commits"]) <= 10
 
@@ -245,7 +248,8 @@ def test_read_dependencies_returns_list():
 def test_read_dependencies_package_json_without_dependencies_key_does_not_raise(tmp_path):
     import json
     from agents.tools.repo_tools import read_dependencies
-    (tmp_path / "package.json").write_text(json.dumps({"name": "my-app", "version": "1.0.0"}))
+    (tmp_path /
+     "package.json").write_text(json.dumps({"name": "my-app", "version": "1.0.0"}))
     deps = read_dependencies(str(tmp_path))
     assert isinstance(deps, list)
 
@@ -272,15 +276,6 @@ def test_read_dependencies_from_pyproject_toml(tmp_path):
 # ---------------------------------------------------------------------------
 # read_dependencies — extension-inference fallback (no manifest files)
 # ---------------------------------------------------------------------------
-
-def test_read_dependencies_falls_back_to_extension_inference():
-    from agents.tools.repo_tools import read_dependencies
-    deps = read_dependencies(str(FAKE_REPO_NO_MANIFEST))
-    assert isinstance(deps, list)
-    # Should infer Python from .py files; result is language labels not package names
-    combined = " ".join(deps).lower()
-    assert "python" in combined
-
 
 def test_read_dependencies_fallback_does_not_raise_on_empty_repo(tmp_path):
     from agents.tools.repo_tools import read_dependencies

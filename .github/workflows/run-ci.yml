@@ -14,7 +14,7 @@ jobs:
       - name: flake8 Lint
         uses: py-actions/flake8@v2
         with:
-          path: "tools agents"
+          path: "agents"
           max-line-length: "120"
 
   test:

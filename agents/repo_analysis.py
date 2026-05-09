@@ -14,12 +14,14 @@ repo_analysis_agent = LlmAgent(
    `[{{"repo": str, "technologies": list[str], "last_used": str }}]`
    `last_used` is an ISO 8601 date string (e.g. `"2026-05-01"`). No other fields appear in this output.
 
-    You should iterate through every single repo not excluding any, not just one repo only, and add an entry for each in the output list, 
-    so the output list contains one element for each repo. 
+    You should iterate through every single repo not excluding any,
+    not just one repo only, and add an entry for each in the output list,
+    so the output list contains one element for each repo.
     You must include specific library names from specific repos into the technologies list.
 
 
-    Do not ask the user any questions and do not explain what you can or cannot do, just call your tools and return the results.
+    Do not ask the user any questions and do not explain what you can or cannot do,
+    just call your tools and return the results.
 
     """,
     tools=[
