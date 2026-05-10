@@ -1,9 +1,15 @@
 from google.adk.agents import LlmAgent
+from google.genai import types
 from agents.tools import repo_tools
 from config import REPOS_PATH
 repo_analysis_agent = LlmAgent(
     name="repo_analysis_agent",
     model="gemini-2.5-flash",
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=0  # Encourage less thinking to speed up response
+        )
+    ),
     description="Gathers information about the user's repositories, including dependencies and recent git logs.",
     instruction=f"""
     Ignore the contents of the user's message.
@@ -28,4 +34,5 @@ repo_analysis_agent = LlmAgent(
         repo_tools.list_repos,
         repo_tools.read_git_log,
         repo_tools.read_dependencies,
-    ],)
+    ],
+)

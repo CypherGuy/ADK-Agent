@@ -56,7 +56,6 @@ Every agent, tool, and pipeline file lives inside the `agents/` directory. `main
 ```
 ADK-Agent/
 ├── agents/
-│   ├── agent.py
 │   ├── coordinator.py
 │   ├── repo_analysis.py
 │   ├── digest_reader.py
@@ -82,11 +81,8 @@ ADK-Agent/
 
 ### File Responsibilities
 
-**`agents/agent.py`**
-The ADK discovery file. Its sole purpose is to expose a module-level `root_agent` variable so that `adk web` can find and load the agent. It imports `root_agent` from `agents/coordinator.py` and does nothing else. No agent logic, no pipeline wiring, no tool imports belong here.
-
 **`agents/coordinator.py`**
-Defines `CoordinatorAgent`. Receives the user's query and interprets what they are asking for. Delegates to the `SequentialAgent` defined in `pipeline.py`. Once the pipeline completes, it meaningfully reformats and contextualises the final suggestions for the user. If `SuggestionAgent` returns a "nothing found" result, `CoordinatorAgent` surfaces that clearly.
+Defines `CoordinatorAgent`. Receives the user's query and delegates to the `SequentialAgent` defined in `pipeline.py`. Acts as a thin router only — it does not reformat or post-process the pipeline output. ADK's sub-agent routing model means the parent agent cannot intercept and transform a sub-agent's response; output from `SuggestionAgent` flows directly to the runner. All formatting and narrative construction is therefore `SuggestionAgent`'s responsibility.
 
 **`agents/repo_analysis.py`**
 Defines `RepoAnalysisAgent`. Calls `list_repos`, then `read_git_log` and `read_dependencies` on each repo. Reasons about what technologies are present across the codebase and when each was last used. Returns a structured list — one entry per repo — in the schema defined in the Data Flow section. Does not decide what is "underused" — that is `SuggestionAgent`'s job.
@@ -96,6 +92,16 @@ Defines `DigestReaderAgent`. Calls `list_digest_files` to find all available dig
 
 **`agents/suggestion.py`**
 Defines `SuggestionAgent`. Receives the structured outputs from both `RepoAnalysisAgent` and `DigestReaderAgent` in context — never the raw files. Applies the staleness threshold (`REPO_STALENESS_DAYS`, injected via system prompt) to determine which technologies are underused. Cross-references underused technologies against digest topics to find genuine matches. Generates up to 10 project suggestions, each grounded in both a real technology gap and a real digest signal. If no matches exist, returns a clear message stating that.
+
+`SuggestionAgent` is also responsible for all output formatting. It must render suggestions as a human-readable narrative — not JSON — in this format:
+
+```
+→ You haven't used <Technology> in <human time (e.g. 8 months, over a year)>.
+  <One-sentence digest trend summary>.
+  Idea: <concrete project linking the technology gap to the trend>.
+```
+
+Technology names must be title-cased (React, not react; TypeScript, not typescript). Staleness must be expressed in human time, not ISO dates. If the relevant repo name adds useful context, include it in the Idea line. Do not produce suggestions where the digest match is weak — omit them and note the gap instead.
 
 **`agents/pipeline.py`**
 Wires the agent pipeline. Creates the `ParallelAgent` wrapping `RepoAnalysisAgent` and `DigestReaderAgent`, then wraps that in a `SequentialAgent` with `SuggestionAgent` as phase 2. Imported by `coordinator.py`. Contains no agent logic — only assembly.
@@ -150,8 +156,8 @@ All tool functions take full absolute paths as arguments. Relative paths or bare
 5. `DigestReaderAgent` returns a structured list — one entry per notable topic found across the digest files within `DIGEST_LOOKBACK_DAYS`:
    `[{ "topic": str, "summary": str, "date": str }]`
    `summary` is a concise description of why the topic matters and what is new. `date` is the ISO 8601 date of the digest file the topic was found in.
-6. `SuggestionAgent` receives both structured lists in context. It compares `last_used` dates against today minus `REPO_STALENESS_DAYS` (injected into its system prompt from config) to identify underused technologies. It then finds digest topics that match those technologies. For each genuine match it generates a suggestion. If no matches are found, it returns a clear message instead.
-7. `CoordinatorAgent` receives the final output and presents it to the user in a readable, friendly format.
+6. `SuggestionAgent` receives both structured lists in context. It compares `last_used` dates against today minus `REPO_STALENESS_DAYS` (injected into its system prompt from config) to identify underused technologies. It then finds digest topics that match those technologies. For each genuine match it generates a suggestion rendered as a human-readable narrative (see File Responsibilities for the exact format). If no matches are found, it returns a clear message instead.
+7. `CoordinatorAgent` passes `SuggestionAgent`'s output through to the runner unchanged. It does not reformat — all presentation is owned by `SuggestionAgent`.
 
 ### What counts as a suggestion
 
@@ -176,13 +182,49 @@ Each suggestion contains: the underused technology, the relevant digest trend an
 
 ---
 
-## Modes of Use
+## Mode of Use
 
-**Development — `adk web`**
-Run `adk web` from the project root. ADK discovers `agents/` as the agent package and loads `agents/agent.py` to find `root_agent`. The browser UI at `http://localhost:8000` allows interactive testing and inspection of the full agent graph, individual agent responses, and tool call traces. This is for development and debugging only.
+**`python main.py`**
+Run `python main.py` or `python main.py "your query"` from the project root. Suggestions stream to the terminal as they are generated. This is the only supported interface.
 
-**Production — `python main.py`**
-Run `python main.py` or `python main.py "your query"` from the project root. Suggestions stream to the terminal as they are generated. This is the intended end-user interface.
+---
+
+## CLI Specification
+
+### Invocation
+
+```
+python main.py [query]
+```
+
+`query` is optional. If omitted, the default query `"What should I build next?"` is used. If provided, the query string is passed directly to `CoordinatorAgent`.
+
+### Input
+
+| Argument | Required | Default                    | Description                              |
+| -------- | -------- | -------------------------- | ---------------------------------------- |
+| `query`  | No       | `"What should I build next?"` | Natural language query passed to the agent |
+
+### Output
+
+Suggestions stream to stdout token by token as `CoordinatorAgent` generates them. The process does not buffer and print at the end — output appears incrementally as each token arrives.
+
+On success, the output is the formatted suggestions from `CoordinatorAgent`. On "nothing found", the output is the clear message from `SuggestionAgent` as presented by `CoordinatorAgent`.
+
+### Exit Codes
+
+| Code | Condition                                      |
+| ---- | ---------------------------------------------- |
+| `0`  | Run completed — including "nothing found" case |
+| `1`  | Fatal error before the pipeline could start (missing `.env` keys, Gemini API unreachable) |
+
+### Error Messages
+
+Errors that prevent the pipeline from starting are printed to stderr and exit with code `1`. Errors that occur inside the pipeline (e.g. a single repo failing to parse) are surfaced inline in the output and do not abort the run.
+
+### Constants
+
+`main.py` must define `DEFAULT_QUERY = "What should I build next?"` as a module-level constant so it is testable and changeable in one place.
 
 ---
 

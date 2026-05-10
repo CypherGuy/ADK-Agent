@@ -7,9 +7,7 @@ The InMemoryRunner, tool dispatch, and agent logic all execute for real.
 
 import json
 import re
-import pytest
 from unittest.mock import patch
-from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
@@ -436,42 +434,40 @@ class TestDigestReaderAgentEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# agents/agent.py — root_agent entry point (required by `adk web`)
+# agents/coordinator.py — coordinator_agent entry point
 # ---------------------------------------------------------------------------
 
 class TestRootAgentEntryPoint:
     """
-    `adk web` discovers agents by importing `agents.agent` and reading a
-    module-level `root_agent` variable. These tests verify that contract so
-    the web UI can boot without a 500 error.
+    The root agent lives in agents/coordinator.py as coordinator_agent.
+    These tests verify that contract so the runner can boot correctly.
     """
 
-    def test_agents_agent_module_is_importable(self):
+    def test_agents_coordinator_module_is_importable(self):
         import importlib
-        assert importlib.import_module("agents.agent") is not None
+        assert importlib.import_module("agents.coordinator") is not None
 
-    def test_agents_module_exposes_root_agent(self):
-        import agents.agent as agent_mod
-        assert hasattr(agent_mod, "root_agent"), (
-            "agents/agent.py must expose a module-level 'root_agent' variable "
-            "so that `adk web` can discover it"
+    def test_agents_module_exposes_coordinator_agent(self):
+        import agents.coordinator as agent_mod
+        assert hasattr(agent_mod, "coordinator_agent"), (
+            "agents/coordinator.py must expose a module-level 'coordinator_agent' variable"
         )
 
     def test_root_agent_is_not_none(self):
-        import agents.agent as agent_mod
-        assert agent_mod.root_agent is not None
+        import agents.coordinator as agent_mod
+        assert agent_mod.coordinator_agent is not None
 
     def test_root_agent_is_an_adk_base_agent(self):
-        import agents.agent as agent_mod
+        import agents.coordinator as agent_mod
         from google.adk.agents import BaseAgent
-        assert isinstance(agent_mod.root_agent, BaseAgent)
+        assert isinstance(agent_mod.coordinator_agent, BaseAgent)
 
     def test_root_agent_has_a_name(self):
-        import agents.agent as agent_mod
-        assert agent_mod.root_agent.name and len(agent_mod.root_agent.name) > 0
+        import agents.coordinator as agent_mod
+        assert agent_mod.coordinator_agent.name and len(agent_mod.coordinator_agent.name) > 0
 
     def test_root_agent_incorporates_repo_analysis_agent(self):
-        import agents.agent as agent_mod
+        import agents.coordinator as agent_mod
         from agents.repo_analysis import repo_analysis_agent
 
         def _find(agent, target, visited=None):
@@ -484,24 +480,24 @@ class TestRootAgentEntryPoint:
                 return True
             return any(_find(sub, target, visited) for sub in (getattr(agent, "sub_agents", None) or []))
 
-        assert _find(agent_mod.root_agent, repo_analysis_agent), (
-            "root_agent must include repo_analysis_agent in its sub-agent graph"
+        assert _find(agent_mod.coordinator_agent, repo_analysis_agent), (
+            "coordinator_agent must include repo_analysis_agent in its sub-agent graph"
         )
 
-    def test_agent_py_does_not_define_agents_inline(self):
-        import agents.agent as agent_mod
+    def test_coordinator_py_does_not_define_agents_inline(self):
+        import agents.coordinator as agent_mod
         from google.adk.agents import LlmAgent
         inline_agents = [
             name for name, val in vars(agent_mod).items()
-            if isinstance(val, LlmAgent) and name != "root_agent"
+            if isinstance(val, LlmAgent) and name != "coordinator_agent"
         ]
         assert inline_agents == [], (
-            f"agents/agent.py must not define LlmAgents inline — found: {inline_agents}. "
+            f"agents/coordinator.py must not define LlmAgents inline — found: {inline_agents}. "
             "Each agent belongs in its own file per the spec."
         )
 
     def test_root_agent_incorporates_digest_reader_agent(self):
-        import agents.agent as agent_mod
+        import agents.coordinator as agent_mod
         from agents.digest_reader import digest_reader_agent
 
         def _find(agent, target, visited=None):
@@ -514,6 +510,6 @@ class TestRootAgentEntryPoint:
                 return True
             return any(_find(sub, target, visited) for sub in (getattr(agent, "sub_agents", None) or []))
 
-        assert _find(agent_mod.root_agent, digest_reader_agent), (
-            "root_agent must include digest_reader_agent in its sub-agent graph"
+        assert _find(agent_mod.coordinator_agent, digest_reader_agent), (
+            "coordinator_agent must include digest_reader_agent in its sub-agent graph"
         )

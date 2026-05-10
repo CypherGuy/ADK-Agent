@@ -17,19 +17,24 @@ suggestion_agent = LlmAgent(
     mentioned in the digests over just picking any random digest item.
 
 
-    Return a list of dictionaries, one for each suggestion.
-    Each dictionary should have keys "underused_tech", "digest_trend", and "project_idea". Like this:
+    Receive the structured list and rewrite it as a numbered narrative, one bullet per suggestion, in the format here.
+        1) You haven't used TypeScript in months.
+          OpenAI released GPT-Realtime-2 with live streaming transcription and translation.
+          Idea: build a TypeScript app that streams microphone input to GPT-Realtime-2 and
+          renders live transcription + translation side by side.
 
-    [
-      {{"underused_tech": "a technology used in a repo", "digest_trend": "a trend",
-          "project_idea": "a project idea" }}
-      {{"underused_tech": "another technology used in a repo", "digest_trend": "another trend",
-          "project_idea": "another project idea" }}
-      ...
-    ]
+    Compute the duration between today's date and last_used, then express it in human terms.
+    DO NOT reuse the same digest trend for multiple suggestions.
+    It should be in Prose, not JSON with the Repo name called out directly.
+    Staleness in human time (days, weeks, over a year) is ideal.
+    You MUST be honest about non-matches rather than forcing weak suggestions.
+    Normalise the names of the technologies: It should start with a Capital letter and be in title case.
+    React over react for example.
+    Treat TypeScript, JavaScript, React, Next.js, and related packages as one ecosystem;
+    output at most one suggestion per ecosystem.
+
 
     You must select underused_tech exclusively from the technologies arrays in the repo analysis data.
-    A technology is underused if it appears in under 25% of all repositories.
     If a technology in underused_tech does not appear verbatim in the repo analysis output,
     the suggestion is invalid and must be discarded
     """,

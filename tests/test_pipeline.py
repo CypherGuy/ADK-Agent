@@ -7,7 +7,6 @@ REQUIRED = [
     ROOT / "main.py",
     ROOT / "config.py",
     ROOT / ".env.example",
-    ROOT / "agents" / "agent.py",
     ROOT / "agents" / "coordinator.py",
     ROOT / "agents" / "repo_analysis.py",
     ROOT / "agents" / "digest_reader.py",

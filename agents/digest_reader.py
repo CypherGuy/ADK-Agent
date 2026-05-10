@@ -1,11 +1,17 @@
 from google.adk.agents import LlmAgent
 from agents.tools import digest_tools
+from google.genai import types
 import config
 
 digest_reader_agent = LlmAgent(
     name="digest_reader",
     model="gemini-2.5-flash",
     description="Reads the user's daily digests.",
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=0  # Encourage less thinking to speed up response
+        )
+    ),
     instruction=f"""
     Ignore the contents of the user's message.
     Read digest files in {config.DIGEST_PATH}. Look for a folder called digests.

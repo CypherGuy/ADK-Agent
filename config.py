@@ -1,7 +1,5 @@
 from pathlib import Path
-
 from dotenv import load_dotenv
-from pathlib import Path
 import os
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
@@ -22,3 +20,4 @@ DIGEST_LOOKBACK_DAYS = int(os.getenv("DIGEST_LOOKBACK_DAYS", "7"))
 EXCLUDED_REPOS = [r.strip() for r in os.getenv(
     "EXCLUDED_REPOS", "").split(",") if r.strip()]
 REPO_STALENESS_DAYS = int(os.getenv("REPO_STALENESS_DAYS", "180"))
+DEFAULT_QUERY = os.getenv("DEFAULT_QUERY", "What should I build next?")

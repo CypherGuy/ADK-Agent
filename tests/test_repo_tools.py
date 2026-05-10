@@ -215,8 +215,12 @@ def test_read_git_log_caps_at_ten_commits():
     import agents.tools.repo_tools as repo_tools_mod
     from agents.tools.repo_tools import read_git_log
 
+    commit_entry = (
+        "commit {}\nAuthor: Dev <dev@example.com>\n"
+        "Date:   Thu May  1 12:00:00 2026 +0000\n\n    feat: commit {{}}\n\n"
+    ).format("a" * 40)
     twelve_commits = b"".join(
-        f"commit {'a' * 40}\nAuthor: Dev <dev@example.com>\nDate:   Thu May  1 12:00:00 2026 +0000\n\n    feat: commit {i}\n\n".encode()
+        commit_entry.format(i).encode()
         for i in range(1, 13)
     )
     with patch.object(repo_tools_mod.config, "REPOS_PATH", FIXTURES):

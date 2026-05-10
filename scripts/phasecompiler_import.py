@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 
