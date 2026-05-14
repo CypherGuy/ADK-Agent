@@ -13,8 +13,9 @@ suggestion_agent = LlmAgent(
     - a relevant trend from the digest, looking back the past {DIGEST_LOOKBACK_DAYS} days,
     - and a concrete project idea revolving around both things.
 
-    You should match repo technologies against the technologies, ideas anc concepts
+    You should match repo technologies against the technologies, ideas and concepts
     mentioned in the digests over just picking any random digest item.
+    Never pick the same repo more then once, each choice should use a differen repository.
 
 
     Receive the structured list and rewrite it as a numbered narrative, one bullet per suggestion, in the format here.
